@@ -1,12 +1,12 @@
 from pygame.key import ScancodeWrapper
-from config import PADDLE_SPEED
-from config import PADDLE_HEIGHT
-from config import PADDLE_WIDTH
-from config import SCREEN_HEIGHT
+from Archive.config import PADDLE_SPEED
+from Archive.config import PADDLE_HEIGHT
+from Archive.config import PADDLE_WIDTH
+from Archive.config import SCREEN_HEIGHT
 
 import pygame
 
-from config import *
+from Archive.config import *
 
 class Paddle(pygame.sprite.Sprite):
     def __init__(self, x, y):

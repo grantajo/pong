@@ -1,12 +1,12 @@
-from config import PADDLE_HEIGHT
-from config import SCREEN_HEIGHT
-from config import SCREEN_WIDTH
+from Archive.config import PADDLE_HEIGHT
+from Archive.config import SCREEN_HEIGHT
+from Archive.config import SCREEN_WIDTH
 import pygame
 
-from config import *
+from Archive.config import *
 
-from player import Paddle
-from ball import Ball
+from Archive.player import Paddle
+from Archive.ball import Ball
 
 class Game:
     def __init__(self):

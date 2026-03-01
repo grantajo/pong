@@ -1,9 +1,9 @@
-from config import SCREEN_HEIGHT
-from config import BALL_INIT_SPEED
-from config import BALL_SIZE
+from Archive.config import SCREEN_HEIGHT
+from Archive.config import BALL_INIT_SPEED
+from Archive.config import BALL_SIZE
 import pygame
 
-from config import *
+from Archive.config import *
 
 class Ball(pygame.sprite.Sprite):
     def __init__(self, x, y):
