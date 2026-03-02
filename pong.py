@@ -1,141 +1,104 @@
 from config import *
 import pygame
 import numpy as np
-
-class Paddle(pygame.Rect):
-    def __init__(self, x, y):
-        self.image = pygame.Surface((PADDLE_WIDTH, PADDLE_HEIGHT))
-        self.image.fill(WHITE)
-        self.speed = PADDLE_SPEED
-        self.rect = self.image.get_rect()
-        self.rect.x = x
-        self.rect.y = y
-
-    def move_up(self):
-        if self.rect.top > 0:
-            self.rect.y -= self.speed
-
-    def move_down(self):
-        if self.rect.bottom < SCREEN_HEIGHT:
-            self.rect.y += self.speed
-
-    def draw(self, surface):
-        surface.blit(self.image, self.rect)
-
-class Ball(pygame.Rect):
-    def __init__(self, x, y, direction: np.ndarray, speed: float):
-        self.image = pygame.Surface((BALL_SIZE, BALL_SIZE))
-        self.image.fill(WHITE)
-        self.rect = self.image.get_rect()
-        self.rect.x = x
-        self.rect.y = y
-        self.direction = direction / np.linalg.norm(direction)
-        self.speed = speed
-        self.speed_x = self.direction[0] * self.speed
-        self.speed_y = self.direction[1] * self.speed
-    
-    def top_bottom_bounce(self):
-        if self.rect.top <= 0 or self.rect.bottom >= SCREEN_HEIGHT:
-            self.speed_y *= -1
-            self.direction[1] *= -1
-
-    def paddle_bounce(self, paddles):
-        for paddle in paddles:
-            if self.rect.colliderect(paddle.rect):
-                self.speed_x *= -1
-                self.direction[0] *= -1
-
-    def draw(self, surface):
-        surface.blit(self.image, self.rect)
+from ball import Ball
+from player import Paddle
     
 
+class Game:
+    def __init__(self):
+        pygame.init()
+        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        self.clock = pygame.time.Clock()
+        self.player1 = Paddle(10, SCREEN_HEIGHT / 2 - PADDLE_HEIGHT / 2)
+        self.player2 = Paddle(SCREEN_WIDTH - 20, SCREEN_HEIGHT / 2 - PADDLE_HEIGHT / 2)
+        ball_starting_angle = np.random.uniform(-np.pi / 4, np.pi / 4)
+        ball_starting_direction = np.array([np.cos(ball_starting_angle), np.sin(ball_starting_angle)])
+        if np.random.rand() < 0.5:
+            ball_starting_direction[0] *= -1
+        self.ball = Ball(
+            SCREEN_WIDTH / 2, 
+            SCREEN_HEIGHT / 2, 
+            ball_starting_direction,
+            BALL_INIT_SPEED,
+        )
+        self.score1 = 0
+        self.score2 = 0
+        self.font = pygame.font.Font(None, 74)
         
 
-# Initiate game
-pygame.init()
-screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-pygame.display.set_caption("2-Player Pong")
-clock = pygame.time.Clock()
+    def inputs(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                raise SystemExit
+        
+        keys = pygame.key.get_pressed()
+        # Player 1
+        if keys[pygame.K_w]:
+            self.player1.move_up()
+        if keys[pygame.K_s]:
+            self.player1.move_down()
 
-player1 = Paddle(10, SCREEN_HEIGHT / 2 - PADDLE_HEIGHT / 2)
-player2 = Paddle(SCREEN_WIDTH - 20, SCREEN_HEIGHT / 2 - PADDLE_HEIGHT / 2)
-ball_starting_direction = np.random.randn(2)
-ball = Ball(
-    SCREEN_WIDTH / 2, 
-    SCREEN_HEIGHT / 2, 
-    ball_starting_direction,
-    BALL_INIT_SPEED,
-)
+        # Player 2
+        if keys[pygame.K_UP]:
+            self.player2.move_up()
+        if keys[pygame.K_DOWN]:
+            self.player2.move_down()
 
-score1 = 0
-score2 = 0
-running = True
-dt = 0 # Used for speeding up the ball
+    def update(self):
+        self.ball.update([self.player1, self.player2])
 
-while True:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            raise SystemExit
+        # Score updates
+        if self.ball.rect.left <= 0:
+            self.score2 += 1
+            self._reset_ball()
+        if self.ball.rect.right >= SCREEN_WIDTH:
+            self.score1 += 1
+            self._reset_ball()
 
-    # Update ball speed
-    ball.speed = min(ball.speed + dt * BALL_ACCEL, BALL_MAX_SPEED)
-    ball.speed_x = ball.direction[0] * ball.speed
-    ball.speed_y = ball.direction[1] * ball.speed
-    ball.rect.x += ball.speed_x
-    ball.rect.y += ball.speed_y
-    ball.top_bottom_bounce()
-    ball.paddle_bounce([player1, player2])
-
-    # Handle Inputs
-    keys = pygame.key.get_pressed()
-    # Player 1
-    if keys[pygame.K_w]:
-        player1.move_up()
-    if keys[pygame.K_s]:
-        player1.move_down()
-
-    # Player 2
-    if keys[pygame.K_UP]:
-        player2.move_up()
-    if keys[pygame.K_DOWN]:
-        player2.move_down()
-
-    # Score updates
-    if ball.rect.left <= 0:
-        score2 += 1
-        ball = Ball(
+    def _reset_ball(self):
+        angle = np.random.uniform(-np.pi / 4, np.pi / 4)
+        direction = np.array([np.cos(angle), np.sin(angle)])
+        if np.random.rand() < 0.5:
+            direction[0] *= -1
+        self.ball = Ball(
             SCREEN_WIDTH / 2, 
             SCREEN_HEIGHT / 2, 
-            np.random.randn(2),
+            direction,
             BALL_INIT_SPEED,
         )
-        dt = 0
-    if ball.rect.right >= SCREEN_WIDTH:
-        score1 += 1
-        ball = Ball(
-            SCREEN_WIDTH / 2, 
-            SCREEN_HEIGHT / 2, 
-            np.random.randn(2),
-            BALL_INIT_SPEED,
-        )
-        dt = 0
 
-    screen.fill(color=BLACK)
+    def render(self):
+        # Render background
+        self.screen.fill(color=BLACK)
 
-    for y in range(0, SCREEN_HEIGHT, 15):
-        pygame.draw.line(
-            screen,
-            WHITE,
-            (SCREEN_WIDTH / 2, y),
-            (SCREEN_WIDTH / 2, y + 10)
-        )
+        # Render center line
+        for y in range(0, SCREEN_HEIGHT, 15):
+            pygame.draw.line(
+                self.screen,
+                WHITE,
+                (SCREEN_WIDTH / 2, y),
+                (SCREEN_WIDTH / 2, y + 10)
+            )
 
-    # Render objects
-    player1.draw(screen)
-    player2.draw(screen)
-    ball.draw(screen)
+        # Render players and ball
+        pygame.draw.rect(self.screen, WHITE, self.player1.rect)
+        pygame.draw.rect(self.screen, WHITE, self.player2.rect)
+        pygame.draw.ellipse(self.screen, WHITE, self.ball.rect)
 
-    pygame.display.flip()
-    dt = clock.tick(FPS) / 1000
+        # Render scores
+        
+        score_text = self.font.render(f"{self.score1}  {self.score2}", True, WHITE)
+        self.screen.blit(score_text, (SCREEN_WIDTH / 2 - score_text.get_width() / 2, 10))
 
+
+    def run(self):
+        while True:
+            self.inputs()
+            self.update()
+            self.render()
+            pygame.display.flip()
+            self.clock.tick(FPS)
+
+        pygame.quit()
